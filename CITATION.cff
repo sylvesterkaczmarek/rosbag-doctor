@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "ROSBag Doctor"
+type: software
+authors:
+  - family-names: Kaczmarek
+    given-names: Sylvester
+year: 2026
+license: MIT
+repository-code: "https://github.com/sylvesterkaczmarek/rosbag-doctor"
+url: "https://github.com/sylvesterkaczmarek/rosbag-doctor"
+version: 0.1.0

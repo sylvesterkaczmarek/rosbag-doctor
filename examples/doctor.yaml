@@ -1,0 +1,26 @@
+version: 1
+
+topics:
+  /imu:
+    required: true
+    rate_hz: 100
+    rate_tolerance: 0.05
+    max_gap_ms: 25
+    max_jitter_ms: 2
+    min_coverage: 0.95
+
+  /camera/image_raw:
+    required: true
+    rate_hz: 30
+    rate_tolerance: 0.10
+    max_gap_ms: 100
+    min_coverage: 0.90
+
+sync:
+  - name: camera-imu
+    reference: /camera/image_raw
+    topics:
+      - /camera/image_raw
+      - /imu
+    max_p95_offset_ms: 7
+    max_offset_ms: 7
