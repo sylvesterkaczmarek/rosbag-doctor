@@ -93,9 +93,12 @@ rosbag-doctor baseline known-good-run -o doctor.yaml
 By default, the generated policy:
 
 - marks every observed topic as required
-- sets the observed effective rate with 15% tolerance when at least three messages exist
-- sets a gap limit with 1.5× headroom over the observed maximum gap
-- sets minimum coverage below the observed coverage
+- identifies periodic streams using their observed timing regularity
+- sets the observed effective rate with 15% tolerance only for periodic streams
+- sets a gap limit with 1.5× headroom only for periodic streams
+- sets minimum coverage below the observed coverage when enough messages exist
+
+This avoids inventing fixed-rate expectations for sparse or event-driven topics such as diagnostics and logs.
 
 Options:
 
@@ -107,3 +110,7 @@ rosbag-doctor baseline known-good-run \
 ```
 
 A baseline is a starting point, not proof that the source recording was healthy. Generate it from a run you have already accepted.
+
+## Validation rules
+
+Durations, message counts, gap limits, jitter limits, start/end tolerances, and sync offsets must be non-negative. `rate_hz` must be positive, `rate_tolerance` and `min_coverage` must be between `0` and `1`, and `bag.min_duration_s` cannot exceed `bag.max_duration_s`. Invalid policies are rejected with exit code `2`.

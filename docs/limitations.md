@@ -1,6 +1,6 @@
 # Limitations
 
-ROSBag Doctor focuses on recording-timeline quality.
+ROSBag Doctor focuses on recording-container integrity and recording-timeline quality.
 
 It currently does not validate:
 
@@ -13,6 +13,7 @@ It currently does not validate:
 - physical plausibility of sensor values
 - network packet loss before data reaches rosbag2
 - DDS QoS compatibility during the original recording
+- file-compressed rosbag2 storage such as `.db3.zstd` or `.mcap.zstd` without prior decompression
 
 The tool retains compact 64-bit timestamp arrays in memory for each topic. Very large recordings therefore use memory roughly in proportion to message count, even though message payloads are never loaded.
 

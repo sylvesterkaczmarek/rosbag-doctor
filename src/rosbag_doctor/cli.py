@@ -6,6 +6,7 @@ import sys
 from rich.console import Console
 from rich.table import Table
 
+from . import __version__
 from .baseline import write_baseline
 from .compare import compare_bags
 from .config import ConfigError
@@ -13,7 +14,7 @@ from .doctor import inspect_bag
 from .output import print_json, print_report, write_json
 from .readers import BagReadError
 
-VERSION = "0.1.0"
+VERSION = __version__
 
 
 def _check_parser() -> argparse.ArgumentParser:
@@ -64,9 +65,11 @@ def _print_compare(data: dict) -> None:
     table.add_column("Rate Δ", justify="right")
     table.add_column("Gap before", justify="right")
     table.add_column("Gap after", justify="right")
+
+    def fmt(value, suffix=""):
+        return "-" if value is None else f"{value:.2f}{suffix}"
+
     for row in data["topics"]:
-        def fmt(value, suffix=""):
-            return "-" if value is None else f"{value:.2f}{suffix}"
         table.add_row(
             row["topic"],
             row["state"],
@@ -98,7 +101,12 @@ def main(argv: list[str] | None = None) -> int:
                 raise ConfigError("--rate-tolerance must be between 0 and 1")
             if args.gap_multiplier < 1:
                 raise ConfigError("--gap-multiplier must be >= 1")
-            output = write_baseline(args.bag, args.output, rate_tolerance=args.rate_tolerance, gap_multiplier=args.gap_multiplier)
+            output = write_baseline(
+                args.bag,
+                args.output,
+                rate_tolerance=args.rate_tolerance,
+                gap_multiplier=args.gap_multiplier,
+            )
             print(f"Wrote {output}")
             return 0
 

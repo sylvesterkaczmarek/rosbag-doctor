@@ -36,6 +36,10 @@ The example above comes from the checked-in demo recording. The camera stream de
 
 Without a config file, ROSBag Doctor performs conservative checks that are useful on unknown recordings:
 
+- missing files referenced by `metadata.yaml`
+- metadata message-count mismatches
+- conflicting message types for the same topic
+- MCAP CRC failures when checksums are present
 - timestamp regressions
 - repeated timestamps
 - timestamp zeroes
@@ -158,7 +162,7 @@ A known-good bag can seed a policy:
 rosbag-doctor baseline ./known-good-run -o doctor.yaml
 ```
 
-The generated file records the observed topics, rates, coverage, and gap limits with headroom. Review it once, commit it with the robot software, then use it on later recordings.
+The generated file marks observed topics as required and adds coverage limits. Rate and gap rules are inferred only for streams that look periodic, so event-driven topics are not automatically treated as fixed-rate sensors. Review the policy once, commit it with the robot software, then use it on later recordings.
 
 ## Compare two runs
 
@@ -214,7 +218,7 @@ See [`docs/checks.md`](docs/checks.md) for definitions and issue codes.
 
 ## Scope
 
-ROSBag Doctor checks the health of the recording timeline. It does not currently inspect message payloads, image corruption, ROS header stamps, TF graph connectivity, calibration correctness, or whether sensor values are physically plausible.
+ROSBag Doctor checks recording-container integrity and timeline health. It does not currently inspect message payloads, image corruption, ROS header stamps, TF graph connectivity, calibration correctness, or whether sensor values are physically plausible.
 
 That distinction is intentional. The tool can run on a laptop or CI runner without ROS message packages and can catch recording failures before payload-specific analysis begins.
 

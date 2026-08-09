@@ -15,10 +15,10 @@ def inspect_bag(
     *,
     strict: bool = False,
 ) -> Report:
-    bag = read_bag(bag_path)
     config = load_config(config_path)
+    bag = read_bag(bag_path)
     stats = topic_stats(bag)
-    issues, sync = run_checks(bag, stats, config, explicit_config=config_path is not None)
+    issues, sync = run_checks(bag, stats, config)
     bag_start, bag_end = bag_bounds(bag)
     duration_s = (bag_end - bag_start) / 1e9 if bag_start is not None and bag_end is not None else 0.0
     status = report_status(issues, strict=strict)

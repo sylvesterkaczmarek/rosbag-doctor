@@ -14,12 +14,19 @@ class TopicSeries:
     message_type: str = "unknown"
     timestamps_ns: array = field(default_factory=lambda: array("q"))
     source_files: set[str] = field(default_factory=set)
+    observed_types: set[str] = field(default_factory=set)
+
+    def register_type(self, message_type: str | None) -> None:
+        normalized = str(message_type or "unknown")
+        if normalized != "unknown":
+            self.observed_types.add(normalized)
+            if self.message_type == "unknown":
+                self.message_type = normalized
 
     def add(self, timestamp_ns: int, source_file: str, message_type: str | None = None) -> None:
         self.timestamps_ns.append(int(timestamp_ns))
         self.source_files.add(source_file)
-        if message_type and self.message_type == "unknown":
-            self.message_type = message_type
+        self.register_type(message_type)
 
     def numpy(self) -> np.ndarray:
         if not self.timestamps_ns:
@@ -34,14 +41,15 @@ class BagData:
     files: list[Path]
     topics: dict[str, TopicSeries] = field(default_factory=dict)
     reader_warnings: list[str] = field(default_factory=list)
+    metadata_total_messages: int | None = None
+    metadata_topic_counts: dict[str, int] = field(default_factory=dict)
 
     def get_or_create_topic(self, name: str, message_type: str = "unknown") -> TopicSeries:
         topic = self.topics.get(name)
         if topic is None:
-            topic = TopicSeries(name=name, message_type=message_type or "unknown")
+            topic = TopicSeries(name=name, message_type="unknown")
             self.topics[name] = topic
-        elif topic.message_type == "unknown" and message_type:
-            topic.message_type = message_type
+        topic.register_type(message_type)
         return topic
 
     @property

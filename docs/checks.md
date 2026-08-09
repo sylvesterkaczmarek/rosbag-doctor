@@ -12,6 +12,19 @@ The bag contains no messages.
 
 A discovered topic contains no messages.
 
+
+### `metadata-message-count-mismatch`
+
+The total message count recorded in `metadata.yaml` differs from the number of messages actually read from the bag files.
+
+### `metadata-topic-count-mismatch`
+
+A per-topic message count recorded in `metadata.yaml` differs from the number of messages actually read.
+
+### `topic-type-conflict`
+
+The same topic name is declared with more than one non-unknown message type across the recording.
+
 ### `timestamp-regression`
 
 A later recorded message on a topic has a smaller timestamp than the preceding recorded message. The reader preserves recorded order for this check.
@@ -73,6 +86,10 @@ The topic's final timestamp is too far before bag end.
 ### `sync-topic-missing`
 
 A topic named in a sync group is absent.
+
+### `sync-no-samples`
+
+A topic exists in a configured sync group but contains no recorded samples, so an offset cannot be measured.
 
 ### `sync-p95-too-high`
 
