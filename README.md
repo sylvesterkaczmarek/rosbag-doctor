@@ -3,6 +3,7 @@
 ![ROSBag Doctor](assets/social/github-social-card-rosbag-doctor.png)
 
 [![CI](https://github.com/sylvesterkaczmarek/rosbag-doctor/actions/workflows/ci.yml/badge.svg)](https://github.com/sylvesterkaczmarek/rosbag-doctor/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/rosbag-doctor.svg)](https://pypi.org/project/rosbag-doctor/)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![ROS 2](https://img.shields.io/badge/ROS%202-rosbag2-22314E?logo=ros)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
@@ -71,18 +72,39 @@ ROSBag Doctor reads recording timestamps and topic metadata. It does not deseria
 
 ## Install
 
-From a clone:
+For a standalone command-line installation, use pipx:
+
+```bash
+pipx install rosbag-doctor
+```
+
+Or install the package with pip:
+
+```bash
+python3 -m pip install rosbag-doctor
+```
+
+Then run:
+
+```bash
+rosbag-doctor --version
+rosbag-doctor my_recording/
+```
+
+### Install from source
+
+If you prefer to install directly from the repository:
 
 ```bash
 git clone https://github.com/sylvesterkaczmarek/rosbag-doctor.git
 cd rosbag-doctor
-python -m pip install .
+python3 -m pip install .
 ```
 
-For development:
+### Development installation
 
 ```bash
-python -m pip install -e '.[dev]'
+python3 -m pip install -e '.[dev]'
 pytest
 ```
 
