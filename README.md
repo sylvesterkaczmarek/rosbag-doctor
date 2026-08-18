@@ -8,7 +8,7 @@
 ![ROS 2](https://img.shields.io/badge/ROS%202-rosbag2-22314E?logo=ros)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-Find bad ROS 2 recordings before they become bad datasets. `rosbag-doctor` checks SQLite3 and MCAP bags for timing gaps, bad rates, timestamp problems, incomplete topic coverage, and configured sensor-sync limits. It works directly on bag files and does not require a ROS installation.
+Find bad ROS 2 recordings before they become bad datasets. ROSBag Doctor works both as the `rosbag-doctor` command-line tool and as a Python library through the public `inspect_bag` API. It checks SQLite3 and MCAP bags for timing gaps, bad rates, timestamp problems, incomplete topic coverage, and configured sensor-sync limits. It works directly on bag files and does not require a ROS installation.
 
 ## At a glance
 
@@ -90,6 +90,23 @@ Then run:
 rosbag-doctor --version
 rosbag-doctor my_recording/
 ```
+
+### Python library API
+
+The same inspection engine is available programmatically through the public `inspect_bag` API:
+
+```python
+from rosbag_doctor import inspect_bag
+
+report = inspect_bag("my_recording/", "doctor.yaml")
+print(report.status)
+print(report.total_messages)
+
+for issue in report.issues:
+    print(issue.severity, issue.code, issue.message)
+```
+
+`inspect_bag` returns the same structured report data used by the CLI, including topic statistics, issues, and sensor-sync results.
 
 ### Install from source
 
