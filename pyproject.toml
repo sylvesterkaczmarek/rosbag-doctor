@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rosbag-doctor"
 version = "0.1.1"
-description = "Check ROS 2 bags for timing gaps, bad rates, timestamp problems, coverage loss, and sensor-sync issues."
+description = "CLI and Python library for checking ROS 2 bags for timing, coverage, timestamp, rate, and sensor-sync problems."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
