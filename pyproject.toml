@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,9 +8,22 @@ version = "0.1.1"
 description = "CLI and Python library for checking ROS 2 bags for timing, coverage, timestamp, rate, and sensor-sync problems."
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{name = "Sylvester Kaczmarek"}]
 keywords = ["ros2", "rosbag2", "robotics", "mcap", "data-quality", "sensor-fusion"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Scientific/Engineering",
+]
 dependencies = [
   "mcap>=1.4,<2",
   "numpy>=1.24",
