@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
-
 from conftest import make_sqlite_bag
+
 from rosbag_doctor.doctor import inspect_bag
 
 
