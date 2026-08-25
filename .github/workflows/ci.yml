@@ -59,16 +59,20 @@ jobs:
           python examples/make_demo_bag.py "$tmpdir/demo-bag" >/dev/null
           cd "$tmpdir"
           rosbag-doctor --version
-          set +e
-          rosbag-doctor demo-bag --json demo-report.json
-          code=$?
-          set -e
-          test "$code" -eq 1
-          test -s demo-report.json
           python - <<'PY'
+          from pathlib import Path
+          import subprocess
+
           import rosbag_doctor
           from rosbag_doctor import inspect_bag
 
+          report = Path("demo-report.json")
+          result = subprocess.run(
+              ["rosbag-doctor", "demo-bag", "--json", str(report)],
+              check=False,
+          )
+          assert result.returncode == 1
+          assert report.is_file() and report.stat().st_size > 0
           assert rosbag_doctor.__version__ == "0.1.1"
           assert callable(inspect_bag)
           PY
@@ -97,9 +101,15 @@ jobs:
           rm -rf .ci-demo-bag .ci-demo-report.json
           python examples/make_demo_bag.py .ci-demo-bag >/dev/null
           rosbag-doctor --version
-          set +e
-          rosbag-doctor .ci-demo-bag --json .ci-demo-report.json
-          code=$?
-          set -e
-          test "$code" -eq 1
-          test -s .ci-demo-report.json
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          report = Path(".ci-demo-report.json")
+          result = subprocess.run(
+              ["rosbag-doctor", ".ci-demo-bag", "--json", str(report)],
+              check=False,
+          )
+          assert result.returncode == 1
+          assert report.is_file() and report.stat().st_size > 0
+          PY
