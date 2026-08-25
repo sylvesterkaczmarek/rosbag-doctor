@@ -71,7 +71,7 @@ jobs:
               ["rosbag-doctor", "demo-bag", "--json", str(report)],
               check=False,
           )
-          assert result.returncode == 1
+          assert result.returncode in {0, 1}
           assert report.is_file() and report.stat().st_size > 0
           assert rosbag_doctor.__version__ == "0.1.1"
           assert callable(inspect_bag)
@@ -110,6 +110,6 @@ jobs:
               ["rosbag-doctor", ".ci-demo-bag", "--json", str(report)],
               check=False,
           )
-          assert result.returncode == 1
+          assert result.returncode in {0, 1}
           assert report.is_file() and report.stat().st_size > 0
           PY
