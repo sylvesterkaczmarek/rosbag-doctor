@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 import yaml
-
 from conftest import make_sqlite_bag
+
 from rosbag_doctor.baseline import build_baseline
 from rosbag_doctor.config import ConfigError, load_config
 from rosbag_doctor.doctor import inspect_bag
