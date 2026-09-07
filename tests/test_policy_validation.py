@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -118,12 +119,12 @@ def test_invalid_utf8_policy_has_a_configuration_error(tmp_path: Path):
         load_config(path)
 
 
-def test_config_path_expands_the_user_directory(tmp_path: Path, monkeypatch):
-    # expanduser uses the platform's user-directory expansion.
-    monkeypatch.setattr("os.path.expanduser", lambda path: str(tmp_path))
+def test_config_path_expands_the_user_directory(tmp_path: Path):
     path = tmp_path / "policy.yaml"
     path.write_text("bag: {min_messages: 20}\n", encoding="utf-8")
-    assert load_config("~/policy.yaml").bag.min_messages == 20
+    # Exercise actual expansion without changing the process's home directory.
+    relative = os.path.relpath(path, Path.home())
+    assert load_config(Path("~") / relative).bag.min_messages == 20
 
 
 @pytest.mark.parametrize("body", ["", "{}\n", "bag: null\ntopics: null\nsync: null\nignore: null\n"])

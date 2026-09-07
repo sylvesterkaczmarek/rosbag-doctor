@@ -100,7 +100,12 @@ def write_text_safely(
             if bag_file.suffix.lower() in {".db3", ".sqlite3"}:
                 protected.extend(Path(f"{bag_file}{suffix}") for suffix in ("-wal", "-shm", "-journal"))
     try:
-        resolved_path = path.resolve()
+        # Strict resolution detects symlink loops on every supported Python.
+        # A new destination (or dangling link) is allowed and replaced atomically.
+        try:
+            resolved_path = path.resolve(strict=True)
+        except FileNotFoundError:
+            resolved_path = path.resolve()
     except RuntimeError as exc:  # Path.resolve raises this for symlink loops on Python < 3.13.
         raise OutputError(f"Could not resolve output path: {path}") from exc
     for source in protected:
