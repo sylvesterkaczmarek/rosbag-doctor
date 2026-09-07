@@ -1,0 +1,6 @@
+include Makefile requirements.txt CITATION.cff CHANGELOG.md CONTRIBUTING.md
+recursive-include docs *.md
+recursive-include examples *.py *.yaml
+recursive-include assets *.png
+recursive-include tests *.py
+recursive-include .github/workflows *.yml *.yaml

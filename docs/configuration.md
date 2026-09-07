@@ -64,11 +64,11 @@ sync:
 | `max_start_delay_ms` | Maximum delay between bag start and first topic timestamp |
 | `max_end_early_ms` | Maximum time between last topic timestamp and bag end |
 
-Topic keys may contain shell-style globs such as `/camera/*` or `/robot/?/imu`. An exact topic rule wins over a matching glob. If several globs match, the longest pattern wins.
+Topic keys may contain shell-style globs such as `/camera/*` or `/robot/?/imu`. An exact topic rule wins over a matching glob. If several globs match, the longest pattern wins; equal-length ties use policy order. Matching is case-sensitive on every operating system.
 
 ## Ignored topics
 
-`ignore` accepts exact names or globs. Ignored topics are still read and shown in the report, but topic health checks are not applied to them.
+`ignore` accepts exact names or globs. Ignored topics are still read and shown in the report, but topic health checks are not applied to them. Required-topic presence, bag/container integrity and explicitly configured sync checks still apply.
 
 ## Sync fields
 
@@ -79,7 +79,7 @@ Each sync check compares every listed topic against a reference topic using near
 | `name` | Human-readable name for the check |
 | `topics` | Two or more exact topic names |
 | `reference` | Topic whose timestamps are used as query points; defaults to the first topic |
-| `max_p95_offset_ms` | Maximum allowed p95 nearest-timestamp offset |
+| `max_p95_offset_ms` | Maximum allowed p95 for each target against the reference; the group reports the worst target |
 | `max_offset_ms` | Maximum allowed nearest-timestamp offset |
 
 Sync checks use recorded timestamps, not timestamps inside message payloads.
@@ -94,7 +94,7 @@ By default, the generated policy:
 
 - marks every observed topic as required
 - identifies periodic streams using their observed timing regularity
-- sets the observed effective rate with 15% tolerance only for periodic streams
+- preserves the observed effective rate with 15% tolerance only for periodic streams
 - sets a gap limit with 1.5× headroom only for periodic streams
 - sets minimum coverage below the observed coverage when enough messages exist
 
@@ -109,8 +109,10 @@ rosbag-doctor baseline known-good-run \
   -o doctor.yaml
 ```
 
+Measured rates and coverage retain their full numeric precision so the generated policy can accept its source recording even with zero rate tolerance or very slow streams. Both options must be finite; rate tolerance is from `0` to `1` and the gap multiplier is at least `1`.
+
 A baseline is a starting point, not proof that the source recording was healthy. Generate it from a run you have already accepted.
 
 ## Validation rules
 
-Durations, message counts, gap limits, jitter limits, start/end tolerances, and sync offsets must be non-negative. `rate_hz` must be positive, `rate_tolerance` and `min_coverage` must be between `0` and `1`, and `bag.min_duration_s` cannot exceed `bag.max_duration_s`. Invalid policies are rejected with exit code `2`.
+Durations, message counts, gap limits, jitter limits, start/end tolerances, and sync offsets must be non-negative. `rate_hz` must be positive, `rate_tolerance` and `min_coverage` must be between `0` and `1`, and `bag.min_duration_s` cannot exceed `bag.max_duration_s`. All numerical limits must be finite. An explicit limit requires an available measurement; a single message cannot satisfy a configured gap or jitter limit. Duplicate YAML keys, non-string mapping keys, invalid section types and duplicate sync names are rejected. YAML merge defaults with explicit overrides remain supported. `version` must be the integer `1`. Invalid policies are rejected with exit code `2`.

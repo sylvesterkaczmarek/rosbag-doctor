@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
@@ -24,6 +25,9 @@ jobs:
           cache: pip
       - name: Install
         run: python -m pip install -e '.[dev]'
+      - name: Exercise minimum runtime dependencies
+        if: matrix.python-version == '3.10'
+        run: python -m pip install 'numpy==1.24.0' 'PyYAML==6.0' 'mcap==1.4.0' 'rich==13.7.0'
       - name: Lint
         run: ruff check .
       - name: Test
@@ -51,6 +55,28 @@ jobs:
         run: |
           python -m pip install --force-reinstall dist/*.whl
           python -m pip check
+      - name: Test source archive against installed wheel
+        shell: bash
+        run: |
+          python -m pip install pytest
+          python - <<'PYTEST'
+          import subprocess
+          import sys
+          import tarfile
+          import tempfile
+          from pathlib import Path
+
+          with tempfile.TemporaryDirectory() as temporary:
+              with tarfile.open(next(Path("dist").glob("*.tar.gz"))) as archive:
+                  archive.extractall(temporary, filter="data")
+              source = next(Path(temporary).iterdir())
+              for required in ("tests/conftest.py", "examples/make_demo_bag.py", "docs/checks.md"):
+                  assert (source / required).is_file(), required
+              subprocess.run(
+                  [sys.executable, "-m", "pytest", str(source / "tests"), "-q"],
+                  cwd=temporary, check=True,
+              )
+          PYTEST
       - name: Installed-wheel smoke test
         shell: bash
         run: |

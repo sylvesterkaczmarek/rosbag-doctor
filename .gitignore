@@ -11,3 +11,6 @@ venv/
 *.log
 .demo-bag/
 *.json
+build/
+dist/
+.ruff_cache/
