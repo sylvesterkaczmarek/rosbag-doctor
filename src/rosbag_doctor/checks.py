@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import fnmatch
+import math
 
 import numpy as np
 
@@ -101,7 +102,7 @@ def _severity_issues_for_topic(stat: TopicStats, rule: TopicRule | None) -> list
         )
     if rule.rate_hz is not None:
         measured = stat.effective_rate_hz
-        if measured is None:
+        if measured is None or not math.isfinite(measured):
             issues.append(Issue("error", "rate-unavailable", "Could not measure topic rate", topic=topic))
         else:
             lower = rule.rate_hz * (1.0 - rule.rate_tolerance)
@@ -120,6 +121,18 @@ def _severity_issues_for_topic(stat: TopicStats, rule: TopicRule | None) -> list
                         },
                     )
                 )
+    for limit, measured, code, label in (
+        (rule.max_gap_ms, stat.max_gap_ms, "gap-unavailable", "maximum gap"),
+        (rule.max_jitter_ms, stat.p95_jitter_ms, "jitter-unavailable", "p95 jitter"),
+        (rule.min_coverage, stat.coverage, "coverage-unavailable", "topic coverage"),
+        (rule.max_start_delay_ms, stat.start_delay_ms, "start-delay-unavailable", "start delay"),
+        (rule.max_end_early_ms, stat.end_early_ms, "end-early-unavailable", "early end"),
+    ):
+        if limit is not None and (measured is None or not math.isfinite(measured)):
+            issues.append(
+                Issue("error", code, f"Could not measure {label} required by topic policy", topic=topic)
+            )
+
     if rule.max_gap_ms is not None and stat.max_gap_ms is not None and stat.max_gap_ms > rule.max_gap_ms:
         issues.append(
             Issue(
@@ -308,17 +321,20 @@ def run_checks(
             sync_stats.append(SyncStats(rule.name, rule.reference, rule.topics, 0, None, None))
             continue
 
-        all_offsets: list[np.ndarray] = []
+        target_p95: dict[str, float] = {}
+        target_max: dict[str, float] = {}
+        samples = 0
         for topic_name in rule.topics:
             if topic_name == rule.reference:
                 continue
             offsets = nearest_offsets_ms(reference, bag.topics[topic_name].numpy())
-            if offsets.size:
-                all_offsets.append(offsets)
-        combined = np.concatenate(all_offsets)
-        p95 = float(np.percentile(combined, 95))
-        max_offset = float(np.max(combined))
-        samples = int(combined.size)
+            target_p95[topic_name] = float(np.percentile(offsets, 95))
+            target_max[topic_name] = float(np.max(offsets))
+            samples += int(offsets.size)
+        # Every target must meet the limit. Pooling offsets lets aligned targets
+        # dilute a failing target's tail and can turn the same defect into a pass.
+        p95 = max(target_p95.values())
+        max_offset = max(target_max.values())
         sync_stats.append(SyncStats(rule.name, rule.reference, rule.topics, samples, p95, max_offset))
         if rule.max_p95_offset_ms is not None and p95 > rule.max_p95_offset_ms:
             issues.append(
@@ -326,7 +342,11 @@ def run_checks(
                     "error",
                     "sync-p95-too-high",
                     f"Sync '{rule.name}' p95 offset {p95:.2f} ms exceeds {rule.max_p95_offset_ms:.2f} ms",
-                    details={"sync": rule.name, "p95_offset_ms": p95},
+                    details={
+                        "sync": rule.name,
+                        "p95_offset_ms": p95,
+                        "target_p95_offsets_ms": target_p95,
+                    },
                 )
             )
         if rule.max_offset_ms is not None and max_offset > rule.max_offset_ms:
@@ -335,7 +355,11 @@ def run_checks(
                     "error",
                     "sync-max-too-high",
                     f"Sync '{rule.name}' max offset {max_offset:.2f} ms exceeds {rule.max_offset_ms:.2f} ms",
-                    details={"sync": rule.name, "max_offset_ms": max_offset},
+                    details={
+                        "sync": rule.name,
+                        "max_offset_ms": max_offset,
+                        "target_max_offsets_ms": target_max,
+                    },
                 )
             )
 

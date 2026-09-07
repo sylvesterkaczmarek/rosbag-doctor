@@ -31,7 +31,7 @@ camera-imu  p95 offset 3.67 ms  max offset 3.67 ms
 ✗ /camera/image_raw  Maximum gap 266.7 ms exceeds 100.0 ms
 ```
 
-The example above comes from the checked-in demo recording. The camera stream deliberately loses several frames; the IMU remains healthy.
+The example above comes from the included demo generator. The camera stream deliberately loses several frames; the IMU remains healthy.
 
 ## What it checks
 
@@ -40,7 +40,8 @@ Without a config file, ROSBag Doctor performs conservative checks that are usefu
 - missing files referenced by `metadata.yaml`
 - metadata message-count mismatches
 - conflicting message types for the same topic
-- MCAP CRC failures when checksums are present
+- MCAP chunk, data-section and summary CRC failures when checksums are present
+- invalid message references and malformed recording timestamps
 - timestamp regressions
 - repeated timestamps
 - timestamp zeroes
@@ -143,6 +144,8 @@ Write a JSON report:
 rosbag-doctor ./run-042 --config doctor.yaml --json report.json
 ```
 
+Report and baseline output cannot overwrite the input bag files, metadata, SQLite sidecars or the policy used for inspection, including file aliases. Existing reports are replaced atomically.
+
 Print JSON to stdout:
 
 ```bash
@@ -209,11 +212,13 @@ The generated file marks observed topics as required and adds coverage limits. R
 rosbag-doctor compare ./run-before-change ./run-after-change
 ```
 
-This reports added and removed topics plus changes in effective rate and maximum gap. JSON output is also available:
+This reports added and removed topics, message type changes, and changes in effective rate and maximum gap. Both recordings retain their health status and diagnostic issues, so timing deltas cannot hide a failing recording. JSON output is also available:
 
 ```bash
 rosbag-doctor compare ./before ./after --format json
 ```
+
+A completed comparison returns `0` even if a recording has health errors. Use the inspection command with a policy for CI health enforcement.
 
 ## Use it in CI
 
@@ -238,20 +243,20 @@ python examples/make_demo_bag.py .demo-bag
 rosbag-doctor .demo-bag --config examples/doctor.yaml
 ```
 
-The command should fail because the configured camera gap limit is exceeded.
+The inspection command should fail because the configured camera gap limit is exceeded. Use an empty destination directory; the generator refuses to overwrite existing files. The demo payloads are placeholders for timing checks and cannot be replayed as real sensor messages.
 
 ## How the numbers are calculated
 
 For each topic, ROSBag Doctor keeps the recorded timestamp sequence and calculates:
 
-- **effective rate** as `(message_count - 1) / recorded_duration`
+- **effective rate** as `(message_count - 1) / (maximum_timestamp - minimum_timestamp)` in seconds
 - **median period** from positive consecutive timestamp differences
 - **maximum gap** from the largest positive consecutive difference
 - **p95 jitter** from absolute deviation around the median period
 - **coverage** as the topic time span divided by the bag time span
-- **sensor offset** using nearest timestamps to the configured reference stream
+- **sensor offset** using nearest timestamps to the configured reference stream; a group reports the worst target p95, so healthy sensors cannot hide a failing sensor
 
-Timestamp regressions are checked in recorded order rather than hidden by sorting the bag first.
+Timestamp regressions are checked in recorded order. Differences retain nanosecond precision before conversion to milliseconds. An explicit gap or jitter limit fails when there are no positive intervals to measure. Coverage measures the endpoints of a stream; use gap limits to detect dropouts within that span.
 
 See [`docs/checks.md`](docs/checks.md) for definitions and issue codes.
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Protect bag files, metadata, SQLite sidecars and inspection policies from accidental report or baseline overwrites; write outputs atomically.
+- Reject malformed SQLite message references and timestamps, and read each database in one consistent transaction.
+- Validate MCAP schema/channel references, summary CRCs and chunk structure in addition to existing chunk/data CRCs.
+- Prevent signed timestamp overflow from producing false regressions or incorrect nearest offsets.
+- Enforce sync p95 limits for every target independently.
+- Reject non-finite and ambiguous YAML policies and fail explicit limits when their measurements are unavailable.
+- Preserve precision in generated baseline policies and validate generation options before reading a recording.
+- Retain health diagnostics and message type changes in comparisons.
+- Include documentation, examples, workflows and tests in source distributions and test them against the installed wheel.
+
 ## 0.1.1
 
 - Fail when `metadata.yaml` references missing files or paths outside the bag directory.

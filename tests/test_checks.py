@@ -86,3 +86,45 @@ def test_strict_turns_warning_into_failure(tmp_path: Path):
     report = inspect_bag(bag, strict=True)
     assert report.status == "fail"
     assert any(issue.code == "large-gap" for issue in report.issues)
+
+
+def test_single_message_cannot_pass_gap_or_jitter_limits(tmp_path: Path):
+    bag = make_sqlite_bag(
+        tmp_path / "singleton", {"/camera": ("sensor_msgs/msg/Image", [1_000_000_000])}
+    )
+    config = tmp_path / "doctor.yaml"
+    config.write_text(
+        "topics:\n  /camera:\n    max_gap_ms: 100\n    max_jitter_ms: 10\n",
+        encoding="utf-8",
+    )
+    report = inspect_bag(bag, config)
+    assert report.status == "fail"
+    assert {issue.code for issue in report.issues} == {"gap-unavailable", "jitter-unavailable"}
+
+
+def test_missing_measurement_does_not_invent_an_unconfigured_failure(tmp_path: Path):
+    bag = make_sqlite_bag(
+        tmp_path / "singleton", {"/event": ("std_msgs/msg/String", [1_000_000_000])}
+    )
+    report = inspect_bag(bag)
+    assert report.status == "pass"
+    assert report.topics[0].max_gap_ms is None
+    assert report.topics[0].p95_jitter_ms is None
+
+
+def test_exact_topic_rule_takes_precedence_over_a_glob(healthy_bag, tmp_path: Path):
+    config = tmp_path / "doctor.yaml"
+    config.write_text(
+        "topics:\n  '/cam*': {rate_hz: 1}\n  /camera: {rate_hz: 30}\n",
+        encoding="utf-8",
+    )
+    assert inspect_bag(healthy_bag, config).status == "pass"
+
+
+def test_longest_matching_glob_takes_precedence(healthy_bag, tmp_path: Path):
+    config = tmp_path / "doctor.yaml"
+    config.write_text(
+        "topics:\n  '/c*': {rate_hz: 1}\n  '/cam*': {rate_hz: 30}\n",
+        encoding="utf-8",
+    )
+    assert inspect_bag(healthy_bag, config).status == "pass"

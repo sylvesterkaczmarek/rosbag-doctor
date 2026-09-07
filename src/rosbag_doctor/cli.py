@@ -5,13 +5,14 @@ import sys
 
 from rich.console import Console
 from rich.table import Table
+from rich.text import Text
 
 from . import __version__
 from .baseline import write_baseline
 from .compare import compare_bags
 from .config import ConfigError
 from .doctor import inspect_bag
-from .output import print_json, print_report, write_json
+from .output import OutputError, print_json, print_report, write_json
 from .readers import BagReadError
 
 VERSION = __version__
@@ -46,16 +47,29 @@ def _compare_parser() -> argparse.ArgumentParser:
 
 
 def _print_help() -> None:
-    print(
-        """usage: rosbag-doctor BAG [options]\n       rosbag-doctor baseline BAG [options]\n       rosbag-doctor compare BASE CANDIDATE [options]\n\nCheck ROS 2 SQLite3 and MCAP recordings for timing, rate, gap, coverage and sync problems.\n\ncommands:\n  baseline    Generate a health policy from a known-good bag\n  compare     Compare timing statistics between two bags\n\nRun 'rosbag-doctor --help' or a command with --help for details."""
+    parser = _check_parser()
+    parser.description = "Check ROS 2 recordings for timing, rate, gap, coverage and sync problems."
+    parser.epilog = (
+        "Other commands: rosbag-doctor baseline BAG [options]; "
+        "rosbag-doctor compare BASE CANDIDATE [options]. "
+        "Run each command with --help for details. Use --version to show the version."
     )
+    parser.print_help()
 
 
 def _print_compare(data: dict) -> None:
     console = Console()
     console.print("[bold]ROSBag Doctor compare[/bold]")
-    console.print(f"base: {data['base']}")
-    console.print(f"candidate: {data['candidate']}")
+    console.print(f"base: {data['base']}", markup=False)
+    console.print(f"candidate: {data['candidate']}", markup=False)
+    for label in ("base", "candidate"):
+        health = data[f"{label}_health"]
+        console.print(f"{label} health: {health['status'].upper()}", markup=False)
+        for issue in health["issues"]:
+            location = f" {issue['topic']}" if issue["topic"] else ""
+            console.print(
+                f"  {issue['severity']}{location}: {issue['message']}", markup=False,
+            )
     console.print()
     table = Table(show_header=True, header_style="bold")
     table.add_column("Topic")
@@ -71,8 +85,8 @@ def _print_compare(data: dict) -> None:
 
     for row in data["topics"]:
         table.add_row(
-            row["topic"],
-            row["state"],
+            Text(row["topic"]),
+            "type changed" if row.get("type_changed") else row["state"],
             fmt(row["base_rate_hz"], " Hz"),
             fmt(row["candidate_rate_hz"], " Hz"),
             fmt(row["rate_change_pct"], "%"),
@@ -97,10 +111,6 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if argv[0] == "baseline":
             args = _baseline_parser().parse_args(argv[1:])
-            if not 0 <= args.rate_tolerance <= 1:
-                raise ConfigError("--rate-tolerance must be between 0 and 1")
-            if args.gap_multiplier < 1:
-                raise ConfigError("--gap-multiplier must be >= 1")
             output = write_baseline(
                 args.bag,
                 args.output,
@@ -114,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
             args = _compare_parser().parse_args(argv[1:])
             data = compare_bags(args.base, args.candidate)
             if args.json_path:
-                write_json(data, args.json_path)
+                write_json(data, args.json_path, bag_paths=[args.base, args.candidate])
             if args.format == "json":
                 print_json(data)
             else:
@@ -125,14 +135,17 @@ def main(argv: list[str] | None = None) -> int:
         report = inspect_bag(args.bag, args.config, strict=args.strict)
         data = report.to_dict()
         if args.json_path:
-            write_json(data, args.json_path)
+            write_json(
+                data, args.json_path, bag_paths=[args.bag],
+                input_paths=[args.config] if args.config else [],
+            )
         if args.format == "json":
             print_json(data)
         else:
             print_report(report)
         return 0 if report.status in {"pass", "warn"} else 1
-    except (BagReadError, ConfigError, OSError) as exc:
-        Console(stderr=True).print(f"[red]error:[/red] {exc}")
+    except (BagReadError, ConfigError, OutputError, OSError) as exc:
+        Console(stderr=True).print(Text(f"error: {exc}", style="red"))
         return 2
 
 

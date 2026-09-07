@@ -69,10 +69,14 @@ def topic_stats(bag: BagData) -> list[TopicStats]:
         chronological_first = int(np.min(ts))
         chronological_last = int(np.max(ts))
         duration_ns = max(0, chronological_last - chronological_first)
-        diffs = np.diff(ts) if count > 1 else np.empty(0, dtype=np.int64)
-        positive = diffs[diffs > 0]
-        monotonic_violations = int(np.count_nonzero(diffs < 0))
-        duplicates = int(np.count_nonzero(diffs == 0))
+        earlier, later = ts[:-1], ts[1:]
+        increasing = later > earlier
+        # Compare signed timestamps before subtracting. A valid difference can
+        # span the whole uint64 range even though both timestamps fit int64.
+        # Unsigned subtraction preserves that exact nonnegative magnitude.
+        positive = later[increasing].astype(np.uint64) - earlier[increasing].astype(np.uint64)
+        monotonic_violations = int(np.count_nonzero(later < earlier))
+        duplicates = int(np.count_nonzero(later == earlier))
         zero_timestamps = int(np.count_nonzero(ts == 0))
 
         if positive.size:
@@ -124,13 +128,25 @@ def topic_stats(bag: BagData) -> list[TopicStats]:
 
 
 def nearest_offsets_ms(reference: np.ndarray, target: np.ndarray) -> np.ndarray:
+    """Nearest absolute offset for each reference timestamp, in reference order.
+
+    Timestamps use signed int64 nanoseconds. Subtract as integers before the
+    final float conversion so epoch-sized timestamps retain small offsets.
+    """
     if reference.size == 0 or target.size == 0:
         return np.empty(0, dtype=np.float64)
-    ref = np.sort(reference.astype(np.int64, copy=False))
+    ref = reference.astype(np.int64, copy=False)
     tgt = np.sort(target.astype(np.int64, copy=False))
     indices = np.searchsorted(tgt, ref)
     right_idx = np.clip(indices, 0, tgt.size - 1)
     left_idx = np.clip(indices - 1, 0, tgt.size - 1)
-    right = np.abs(tgt[right_idx] - ref)
-    left = np.abs(tgt[left_idx] - ref)
+    right = _timestamp_distances(tgt[right_idx], ref)
+    left = _timestamp_distances(tgt[left_idx], ref)
     return np.minimum(left, right).astype(np.float64) / NS_PER_MS
+
+
+def _timestamp_distances(left: np.ndarray, right: np.ndarray) -> np.ndarray:
+    """Exact absolute differences across the entire signed timestamp range."""
+    upper = np.maximum(left, right).astype(np.uint64)
+    lower = np.minimum(left, right).astype(np.uint64)
+    return upper - lower

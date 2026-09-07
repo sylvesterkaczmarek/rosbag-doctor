@@ -17,9 +17,10 @@ def add_topic(connection: sqlite3.Connection, topic_id: int, name: str, message_
 def main() -> int:
     output = Path(sys.argv[1] if len(sys.argv) > 1 else "demo-bag")
     output.mkdir(parents=True, exist_ok=True)
+    if any(output.iterdir()):
+        print(f"Refusing to overwrite a non-empty directory: {output}", file=sys.stderr)
+        return 2
     db_path = output / "demo_0.db3"
-    if db_path.exists():
-        db_path.unlink()
 
     connection = sqlite3.connect(db_path)
     connection.executescript(

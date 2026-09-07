@@ -55,13 +55,19 @@ A topic contains fewer messages than configured.
 
 ### `rate-out-of-range`
 
-Effective rate falls outside `rate_hz ± rate_tolerance`.
+Effective rate falls outside `rate_hz × (1 ± rate_tolerance)`.
 
 Effective rate is:
 
 ```text
-(message_count - 1) / (last_timestamp - first_timestamp)
+(message_count - 1) / ((maximum_timestamp_ns - minimum_timestamp_ns) / 1e9)
 ```
+
+The report's `first_timestamp_ns` and `last_timestamp_ns` retain recorded order; duration, coverage, start delay and early stop use timestamp extrema. A regression still produces an error even if the effective rate looks plausible.
+
+### Unavailable measurements
+
+`rate-unavailable`, `gap-unavailable`, `jitter-unavailable`, `coverage-unavailable`, `start-delay-unavailable` and `end-early-unavailable` fail an explicit policy when the required measurement cannot be computed. A single message, for example, cannot establish a gap or jitter measurement. Empty topics produce `empty-topic`.
 
 ### `gap-too-large`
 
@@ -73,15 +79,15 @@ p95 absolute deviation from the median positive period exceeds `max_jitter_ms`.
 
 ### `coverage-too-low`
 
-Topic time span divided by the overall bag time span is below `min_coverage`.
+Topic time span divided by the overall bag time span is below `min_coverage`. This measures endpoint coverage, so a stream with a long internal dropout can still have full coverage. Use `max_gap_ms` as well. When the entire bag has zero time span, a non-empty topic has coverage `1.0` by convention; it still has no measurable rate or positive interval.
 
 ### `starts-too-late`
 
-The topic's first timestamp is too far after bag start.
+The topic's earliest timestamp is too far after bag start.
 
 ### `ends-too-early`
 
-The topic's final timestamp is too far before bag end.
+The topic's latest timestamp is too far before bag end.
 
 ### `sync-topic-missing`
 
@@ -93,11 +99,11 @@ A topic exists in a configured sync group but contains no recorded samples, so a
 
 ### `sync-p95-too-high`
 
-The p95 nearest-timestamp offset from the reference stream exceeds the configured limit.
+For each target, calculate a nearest-timestamp offset for every reference sample, then its p95 using NumPy's linear percentile interpolation. The reported group p95 is the largest target p95. Each target must meet the limit independently; adding healthy targets cannot dilute a failing target. Failure details list the per-target p95 offsets.
 
 ### `sync-max-too-high`
 
-The worst nearest-timestamp offset from the reference stream exceeds the configured limit.
+The largest nearest-timestamp offset across all targets exceeds the configured limit. Failure details list each target's maximum. `samples` counts all reference-target comparisons, including reuse of a target message as the nearest neighbour of several reference samples. Matching is directional and does not establish one-to-one sensor correspondence or physical acquisition synchronisation.
 
 ### Bag-level checks
 
